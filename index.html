@@ -277,14 +277,23 @@ function initMap() {
 }
 
 function arcPoints(lat1, lng1, lat2, lng2, steps) {
-  // Great-circle-ish arc lifted slightly northward for visual clarity
+  // Perpendicular-offset Bezier — always bows southward away from Canada
   const pts = [];
-  const midLat = (lat1 + lat2) / 2 + Math.abs(lat1 - lat2) * 0.2 + 2;
+  const midLat = (lat1 + lat2) / 2;
   const midLng = (lng1 + lng2) / 2;
+  const dLat = lat2 - lat1;
+  const dLng = lng2 - lng1;
+  const len  = Math.sqrt(dLat * dLat + dLng * dLng) || 1;
+  // Bow magnitude ~20% of lane length
+  const bow = len * 0.20;
+  // Rotate vector 90° clockwise: perpendicular is (dLng, -dLat)
+  // Subtract from midLat so arc always dips south (lower latitude)
+  const cpLat = midLat - Math.abs((dLng / len) * bow);
+  const cpLng = midLng;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const lat = (1-t)*(1-t)*lat1 + 2*(1-t)*t*midLat + t*t*lat2;
-    const lng = (1-t)*(1-t)*lng1 + 2*(1-t)*t*midLng + t*t*lng2;
+    const lat = (1-t)*(1-t)*lat1 + 2*(1-t)*t*cpLat + t*t*lat2;
+    const lng = (1-t)*(1-t)*lng1 + 2*(1-t)*t*cpLng + t*t*lng2;
     pts.push([lat, lng]);
   }
   return pts;
