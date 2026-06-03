@@ -192,7 +192,7 @@
     <div class="topbar">
       <div>
         <div class="topbar-title">Restaurant Depot — Lane Intelligence</div>
-        <div class="topbar-meta">90 ongoing lanes · RD - New Lanes tenders from Apr 15 2026</div>
+        <div class="topbar-meta">90 ongoing lanes · 16 tenders from RD - New Lanes (Apr 2026+)</div>
       </div>
       <div style="display:flex;gap:8px;">
         <button class="btn btn-ghost" onclick="fitAll()">
@@ -216,7 +216,7 @@
       <div class="stat-chip">
         <div>
           <div class="stat-chip-label">New Tenders</div>
-          <div class="stat-chip-val c-orange" id="stat-td">9</div>
+          <div class="stat-chip-val c-orange" id="stat-td">16</div>
         </div>
       </div>
       <div class="stat-chip">
@@ -293,15 +293,22 @@ const EXISTING_LANES = [{"lane":"RICHLAND - PHOENIX","origin":"RICHLAND","dest":
 
 // Tenders extracted from RD - New Lanes emails (Apr 15 2026+)
 const TENDER_LANES = [
-  {lane:"HUMBOLDT TN - HICKSVILLE NY",origin:"HUMBOLDT",dest:"HICKSVILLE",orig_lat:35.8200,orig_lng:-88.9170,dest_lat:40.7635,dest_lng:-73.5254,ref:"#556136",amount:5550,pickup:"06/15/2026",delivery:"06/17/2026"},
-  {lane:"ARBUCKLE CA - FIFE WA",origin:"ARBUCKLE",dest:"FIFE",orig_lat:39.016,orig_lng:-122.0588,dest_lat:47.2365,dest_lng:-122.3587,ref:"#554621",amount:3595,pickup:"06/08/2026",delivery:"06/09/2026"},
-  {lane:"ARBUCKLE CA - SAN DIEGO CA",origin:"ARBUCKLE",dest:"SAN DIEGO",orig_lat:39.016,orig_lng:-122.0588,dest_lat:32.7157,dest_lng:-117.1611,ref:"#553708",amount:2100,pickup:"06/04/2026",delivery:"06/04/2026"},
-  {lane:"ARBUCKLE CA - WOODINVILLE WA",origin:"ARBUCKLE",dest:"WOODINVILLE",orig_lat:39.016,orig_lng:-122.0588,dest_lat:47.7543,dest_lng:-122.1635,ref:"#553697",amount:3595,pickup:"06/03/2026",delivery:"06/05/2026"},
-  {lane:"ARBUCKLE CA - VERNON CA",origin:"ARBUCKLE",dest:"VERNON",orig_lat:39.016,orig_lng:-122.0588,dest_lat:34.0,dest_lng:-118.22,ref:"#555977",amount:1925,pickup:"06/11/2026",delivery:"06/11/2026"},
-  {lane:"ARBUCKLE CA - LONG BEACH CA",origin:"ARBUCKLE",dest:"LONG BEACH",orig_lat:39.016,orig_lng:-122.0588,dest_lat:33.7701,dest_lng:-118.1937,ref:"#552764",amount:1925,pickup:"06/01/2026",delivery:"06/01/2026"},
+  {lane:"HUMBOLDT TN - HICKSVILLE NY",origin:"HUMBOLDT",dest:"HICKSVILLE",orig_lat:35.820,orig_lng:-88.917,dest_lat:40.7635,dest_lng:-73.5254,ref:"#556136",amount:5550,pickup:"06/15/2026",delivery:"06/17/2026"},
+  {lane:"ARBUCKLE CA - FIFE WA",origin:"ARBUCKLE",dest:"FIFE",orig_lat:39.016,orig_lng:-122.059,dest_lat:47.2365,dest_lng:-122.3587,ref:"#554621",amount:3595,pickup:"06/08/2026",delivery:"06/09/2026"},
+  {lane:"ARBUCKLE CA - WOODINVILLE WA",origin:"ARBUCKLE",dest:"WOODINVILLE",orig_lat:39.016,orig_lng:-122.059,dest_lat:47.7543,dest_lng:-122.1635,ref:"#553697",amount:3595,pickup:"06/03/2026",delivery:"06/05/2026"},
+  {lane:"ARBUCKLE CA - SAN DIEGO CA",origin:"ARBUCKLE",dest:"SAN DIEGO",orig_lat:39.016,orig_lng:-122.059,dest_lat:32.7157,dest_lng:-117.1611,ref:"#553708",amount:2100,pickup:"06/04/2026",delivery:"06/04/2026"},
+  {lane:"ARBUCKLE CA - SCOTTSDALE AZ",origin:"ARBUCKLE",dest:"SCOTTSDALE",orig_lat:39.016,orig_lng:-122.059,dest_lat:33.4942,dest_lng:-111.9261,ref:"#554617",amount:2595,pickup:"06/08/2026",delivery:"06/08/2026"},
+  {lane:"ARBUCKLE CA - GARDENA CA",origin:"ARBUCKLE",dest:"GARDENA",orig_lat:39.016,orig_lng:-122.059,dest_lat:33.8883,dest_lng:-118.309,ref:"#555975",amount:1925,pickup:"06/10/2026",delivery:"06/10/2026"},
+  {lane:"ARBUCKLE CA - VERNON CA",origin:"ARBUCKLE",dest:"VERNON",orig_lat:39.016,orig_lng:-122.059,dest_lat:34.0,dest_lng:-118.22,ref:"#555977",amount:1925,pickup:"06/11/2026",delivery:"06/11/2026"},
+  {lane:"GRAND PRAIRIE TX - TOMBALL TX",origin:"GRAND PRAIRIE",dest:"TOMBALL",orig_lat:32.746,orig_lng:-97.001,dest_lat:30.0974,dest_lng:-95.6163,ref:"#555406",amount:1450,pickup:"06/18/2026",delivery:"06/18/2026"},
+  {lane:"ALEXANDRIA IN - SOUTH PLAINFIELD NJ",origin:"ALEXANDRIA IN",dest:"SOUTH PLAINFIELD",orig_lat:40.2628,orig_lng:-85.6783,dest_lat:40.5773,dest_lng:-74.4182,ref:"#552764",amount:2595,pickup:"06/08/2026",delivery:"06/10/2026"},
+  {lane:"ALEXANDRIA IN - SOUTH HACKENSACK NJ",origin:"ALEXANDRIA IN",dest:"SOUTH HACKENSACK",orig_lat:40.2628,orig_lng:-85.6783,dest_lat:40.8726,dest_lng:-74.0432,ref:"#552779",amount:2725,pickup:"06/08/2026",delivery:"06/10/2026"},
+  {lane:"ALEXANDRIA IN - SOUTH PLAINFIELD NJ (2)",origin:"ALEXANDRIA IN",dest:"SOUTH PLAINFIELD",orig_lat:40.2628,orig_lng:-85.6783,dest_lat:40.5773,dest_lng:-74.4182,ref:"#552789",amount:2595,pickup:"06/08/2026",delivery:"06/10/2026"},
+  {lane:"ALEXANDRIA IN - SOUTH HACKENSACK NJ (2)",origin:"ALEXANDRIA IN",dest:"SOUTH HACKENSACK",orig_lat:40.2628,orig_lng:-85.6783,dest_lat:40.8726,dest_lng:-74.0432,ref:"#552799",amount:2725,pickup:"06/08/2026",delivery:"06/10/2026"},
+  {lane:"SILVER SPRINGS NY - NEPTUNE NJ",origin:"SILVER SPRINGS NY",dest:"NEPTUNE",orig_lat:42.6645,orig_lng:-78.1016,dest_lat:40.2065,dest_lng:-74.0337,ref:"#549242",amount:1725,pickup:"05/26/2026",delivery:"05/27/2026"},
   {lane:"PASCO WA - SACRAMENTO CA",origin:"PASCO",dest:"SACRAMENTO",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:38.5816,dest_lng:-121.4944,ref:"#555975",amount:2200,pickup:"06/09/2026",delivery:"06/10/2026"},
-  {lane:"PASCO WA - CONCORD CA",origin:"PASCO",dest:"CONCORD",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:37.978,dest_lng:-122.0311,ref:"#552799",amount:2150,pickup:"05/30/2026",delivery:"05/31/2026"},
-  {lane:"PASCO WA - STOCKTON CA",origin:"PASCO",dest:"STOCKTON",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:37.9577,dest_lng:-121.2908,ref:"#549242",amount:2200,pickup:"05/25/2026",delivery:"05/26/2026"},
+  {lane:"PASCO WA - CONCORD CA",origin:"PASCO",dest:"CONCORD",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:37.978,dest_lng:-122.031,ref:"#552799p",amount:2150,pickup:"05/30/2026",delivery:"05/31/2026"},
+  {lane:"PASCO WA - STOCKTON CA",origin:"PASCO",dest:"STOCKTON",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:37.9577,dest_lng:-121.2908,ref:"#549242p",amount:2200,pickup:"05/25/2026",delivery:"05/26/2026"},
 ];
 
 // ── MAP SETUP ─────────────────────────────────────────────────────────
@@ -331,7 +338,7 @@ const CITY_TO_STATE = {
   WILMINGTON:'North Carolina','SOUTH PLAINFIELD':'New Jersey',
   ALEXANDRIA:'Virginia',STOCKTON:'California',ROSEVILLE:'California',
   'SAN DIEGO':'California',VERNON:'California','FORTH WORTH':'Texas',
-  WOODINVILLE:'Washington',HICKSVILLE:'New York',
+  WOODINVILLE:'Washington',HICKSVILLE:'New York','ALEXANDRIA IN':'Indiana','SILVER SPRINGS NY':'New York',NEPTUNE:'New Jersey','SOUTH HACKENSACK':'New Jersey','SOUTH PLAINFIELD':'New Jersey',GARDENA:'California',SCOTTSDALE:'Arizona','ALEXANDRIA IN':'Indiana','SILVER SPRINGS NY':'New York',NEPTUNE:'New Jersey','SOUTH HACKENSACK':'New Jersey',GARDENA:'California',SCOTTSDALE:'Arizona',
 };
 
 let stateLayer = null;
