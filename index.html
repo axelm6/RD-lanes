@@ -310,11 +310,72 @@ let rdMap, layerGroup, markerGroup;
 let activeLayer = 'all';
 let activeOrigins = new Set(); // empty = show all
 
-// States covered by RD network
-const ORIGIN_STATES = new Set(['California','Oregon','Texas','Washington','Nevada','Tennessee']);
-const DEST_STATES   = new Set(['New Mexico','California','Virginia','New York','Washington','Nevada','Colorado','Oregon','Oklahoma','New Jersey','North Carolina','Arizona','Louisiana','Texas']);
+// City → US state lookup
+const CITY_TO_STATE = {
+  WARDEN:'Washington',PASCO:'Washington',RICHLAND:'Washington',
+  PORTLAND:'Oregon',ARBUCKLE:'California',CARSON:'California',
+  YERINGTON:'Nevada','SILVER SPRINGS':'Nevada',
+  'GRAND PRAIRIE':'Texas',HUMBOLDT:'Tennessee',
+  PHOENIX:'Arizona','FORT WORTH':'Texas',WALNUT:'California',
+  TULSA:'Oklahoma',TOMBALL:'Texas',ALBUQUERQUE:'New Mexico',
+  ANAHEIM:'California',LEWISVILLE:'Texas',FRESNO:'California',
+  'HUNTINGTON BEACH':'California','SAN ANTONIO':'Texas',
+  HOUSTON:'Texas','LOS ANGELES':'California',PASADENA:'California',
+  AUSTIN:'Texas',RICHARDSON:'Texas',DALLAS:'Texas',
+  'NEW ORLEANS':'Louisiana',COLTON:'California','LAS VEGAS':'Nevada',
+  MESA:'Arizona','SAN JOSE':'California',TORRANCE:'California',
+  'LONG BEACH':'California',TUCSON:'Arizona','GREENWOOD VILLAGE':'Colorado',
+  SACRAMENTO:'California',OAKLAND:'California','SAN FRANCISCO':'California',
+  CONCORD:'California','VAN NUYS':'California',FIFE:'Washington',
+  CLACKAMAS:'Oregon','OKLAHOMA CITY':'Oklahoma',UNION:'New Jersey',
+  WILMINGTON:'North Carolina','SOUTH PLAINFIELD':'New Jersey',
+  ALEXANDRIA:'Virginia',STOCKTON:'California',ROSEVILLE:'California',
+  'SAN DIEGO':'California',VERNON:'California','FORTH WORTH':'Texas',
+  WOODINVILLE:'Washington',HICKSVILLE:'New York',
+};
 
 let stateLayer = null;
+
+// Compute which states are active given current filters — called on every render
+function getActiveStates() {
+  const visibleEx = activeLayer !== 'tender'
+    ? EXISTING_LANES.filter(l => activeOrigins.size === 0 || activeOrigins.has(l.origin))
+    : [];
+  const visibleTd = activeLayer !== 'existing'
+    ? TENDER_LANES.filter(l => activeOrigins.size === 0 || activeOrigins.has(l.origin))
+    : [];
+
+  const originStates = new Set();
+  const destStates   = new Set();
+
+  [...visibleEx, ...visibleTd].forEach(l => {
+    const os = CITY_TO_STATE[l.origin.toUpperCase()] || CITY_TO_STATE[l.origin];
+    const ds = CITY_TO_STATE[l.dest.toUpperCase()]   || CITY_TO_STATE[l.dest];
+    if (os) originStates.add(os);
+    if (ds) destStates.add(ds);
+  });
+
+  return { originStates, destStates };
+}
+
+function refreshStateColors() {
+  if (!stateLayer) return;
+  const { originStates, destStates } = getActiveStates();
+  stateLayer.eachLayer(layer => {
+    const name = layer.feature.properties.name;
+    const isOrigin = originStates.has(name);
+    const isDest   = destStates.has(name);
+    if (isOrigin && isDest) {
+      layer.setStyle({ fillColor: '#c084fc', fillOpacity: 0.10, color: '#c084fc', weight: 0.5, opacity: 0.25 });
+    } else if (isOrigin) {
+      layer.setStyle({ fillColor: '#E60080', fillOpacity: 0.08, color: '#E60080', weight: 0.5, opacity: 0.20 });
+    } else if (isDest) {
+      layer.setStyle({ fillColor: '#32AAE1', fillOpacity: 0.07, color: '#32AAE1', weight: 0.5, opacity: 0.18 });
+    } else {
+      layer.setStyle({ fillColor: 'transparent', fillOpacity: 0, color: '#ccc', weight: 0.3, opacity: 0.12 });
+    }
+  });
+}
 
 function initMap() {
   rdMap = L.map('rd-map', {
@@ -326,43 +387,27 @@ function initMap() {
     attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
   }).addTo(rdMap);
 
-  // State fill layer — load GeoJSON, draw BEFORE lanes
+  // State fill layer — load GeoJSON first, draw BEFORE lanes
   fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
     .then(r => r.json())
     .then(geo => {
       stateLayer = L.geoJson(geo, {
-        style: feature => {
-          const name = feature.properties.name;
-          const isOrigin = ORIGIN_STATES.has(name);
-          const isDest   = DEST_STATES.has(name);
-          if (isOrigin && isDest) {
-            // Both — soft purple tint
-            return { fillColor: '#c084fc', fillOpacity: 0.10, color: '#c084fc', weight: 0.5, opacity: 0.25 };
-          } else if (isOrigin) {
-            // Origin only — very soft pink
-            return { fillColor: '#E60080', fillOpacity: 0.08, color: '#E60080', weight: 0.5, opacity: 0.20 };
-          } else if (isDest) {
-            // Dest only — very soft blue
-            return { fillColor: '#32AAE1', fillOpacity: 0.07, color: '#32AAE1', weight: 0.5, opacity: 0.18 };
-          }
-          return { fillColor: 'transparent', fillOpacity: 0, color: '#ccc', weight: 0.3, opacity: 0.15 };
-        },
+        style: () => ({ fillColor: 'transparent', fillOpacity: 0, color: '#ccc', weight: 0.3, opacity: 0.12 }),
         onEachFeature: (feature, layer) => {
-          const name = feature.properties.name;
-          const isOrigin = ORIGIN_STATES.has(name);
-          const isDest   = DEST_STATES.has(name);
-          if (isOrigin || isDest) {
-            const tag = isOrigin && isDest ? 'Origin + Destination' : isOrigin ? 'Origin hub state' : 'Destination state';
-            layer.bindTooltip(`<b>${name}</b><br/><span style="font-size:11px;color:#9095a0;">${tag}</span>`, {
-              className: 'lane-tooltip', sticky: true, direction: 'top'
-            });
-          }
+          layer.bindTooltip(() => {
+            const name = feature.properties.name;
+            const { originStates, destStates } = getActiveStates();
+            const isO = originStates.has(name), isD = destStates.has(name);
+            if (!isO && !isD) return name;
+            const tag = isO && isD ? 'Origin + Destination' : isO ? 'Origin hub state' : 'Destination state';
+            return `<b>${name}</b><br/><span style="font-size:11px;color:#9095a0;">${tag}</span>`;
+          }, { className: 'lane-tooltip', sticky: true, direction: 'top' });
         }
       }).addTo(rdMap);
 
-      // Lanes and markers draw on top
       layerGroup  = L.layerGroup().addTo(rdMap);
       markerGroup = L.layerGroup().addTo(rdMap);
+      refreshStateColors();
       renderMap();
     });
 
@@ -397,6 +442,7 @@ function renderMap() {
   if (!layerGroup || !markerGroup) return;
   layerGroup.clearLayers();
   markerGroup.clearLayers();
+  refreshStateColors();
 
   const originSet = new Set();
 
