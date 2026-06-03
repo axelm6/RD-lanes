@@ -414,7 +414,11 @@ function initMap() {
     attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
   }).addTo(rdMap);
 
-  // State fill layer — load GeoJSON first, draw BEFORE lanes
+  // Initialize lane/marker layers immediately so setLayer works at any time
+  layerGroup  = L.layerGroup().addTo(rdMap);
+  markerGroup = L.layerGroup().addTo(rdMap);
+
+  // State fill layer — load GeoJSON asynchronously, draw UNDER lanes
   fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
     .then(r => r.json())
     .then(geo => {
@@ -431,13 +435,12 @@ function initMap() {
           }, { className: 'lane-tooltip', sticky: true, direction: 'top' });
         }
       }).addTo(rdMap);
-
-      layerGroup  = L.layerGroup().addTo(rdMap);
-      markerGroup = L.layerGroup().addTo(rdMap);
+      // Move state layer below lanes
+      stateLayer.bringToBack();
       refreshStateColors();
-      renderMap();
     });
 
+  renderMap();
   buildOriginPills();
   buildLaneList();
 }
