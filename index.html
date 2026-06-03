@@ -58,12 +58,24 @@
   .filter-row select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:7px 10px;font-size:12px;font-family:'Nunito',sans-serif;font-weight:600;appearance:none;outline:none;}
   .filter-row select:focus{border-color:var(--blue);}
 
-  /* Origin pills */
-  .origin-pills{display:flex;flex-wrap:wrap;gap:5px;padding:0 20px 14px;}
-  .op{padding:4px 10px;border-radius:99px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all 0.15s;border:1px solid var(--border2);background:transparent;color:var(--text3);font-weight:500;}
-  .op:hover{border-color:var(--blue);color:var(--blue);}
-  .op.active{border-color:var(--blue);color:var(--blue);background:var(--accent-light);}
-  .op.all-active{border-color:var(--pink);color:var(--pink);background:rgba(230,0,128,0.08);}
+  /* Origin checkboxes */
+  .origin-list{display:flex;flex-direction:column;gap:2px;padding:0 14px 14px;}
+  .oc-row{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:var(--radius);cursor:pointer;transition:background 0.12s;user-select:none;}
+  .oc-row:hover{background:var(--surface2);}
+  .oc-row.checked{background:var(--accent-light);}
+  .oc-check{width:15px;height:15px;border:2px solid var(--border2);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.12s;background:transparent;}
+  .oc-row.checked .oc-check{background:var(--blue);border-color:var(--blue);}
+  .oc-check svg{width:9px;height:9px;color:#fff;opacity:0;}
+  .oc-row.checked .oc-check svg{opacity:1;}
+  .oc-name{font-size:12px;font-weight:700;color:var(--text2);flex:1;font-family:'DM Mono',monospace;}
+  .oc-row.checked .oc-name{color:var(--accent-dark);}
+  .oc-badges{display:flex;gap:3px;margin-left:auto;}
+  .oc-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;font-family:'DM Mono',monospace;}
+  .oc-badge-ex{background:var(--accent-light);color:var(--accent-dark);border:1px solid rgba(50,170,225,0.25);}
+  .oc-badge-td{background:rgba(250,180,60,0.15);color:#b07a10;border:1px solid rgba(250,180,60,0.35);}
+  .oc-all-row{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;margin-bottom:4px;border-bottom:1px solid var(--border);}
+  .oc-all-btn{font-size:10px;font-family:'DM Mono',monospace;font-weight:700;cursor:pointer;color:var(--text3);background:none;border:none;padding:2px 6px;border-radius:4px;transition:color 0.12s;}
+  .oc-all-btn:hover{color:var(--blue);}
 
   /* Sidebar lane list */
   .lane-list{flex:1;overflow-y:auto;padding:0 14px 16px;}
@@ -179,7 +191,7 @@
     <div class="filter-block">
       <div class="s-label" style="margin-bottom:10px;">Filter by origin</div>
     </div>
-    <div class="origin-pills" id="origin-pills"></div>
+    <div class="origin-list" id="origin-list"></div>
 
     <div class="s-divider"></div>
     <div class="sidebar-section"><div class="s-label">Lanes</div></div>
@@ -256,7 +268,7 @@ const TENDER_LANES = [
 
 let rdMap, layerGroup, markerGroup;
 let activeLayer = 'all';
-let activeOrigin = 'ALL';
+let activeOrigins = new Set(); // empty = show all
 
 function initMap() {
   rdMap = L.map('rd-map', {
@@ -308,7 +320,7 @@ function renderMap() {
   // Draw existing lanes
   if (activeLayer !== 'tender') {
     EXISTING_LANES.forEach((l, i) => {
-      if (activeOrigin !== 'ALL' && l.origin !== activeOrigin) return;
+      if (activeOrigins.size > 0 && !activeOrigins.has(l.origin)) return;
       const pts = arcPoints(l.orig_lat, l.orig_lng, l.dest_lat, l.dest_lng, 40);
       const line = L.polyline(pts, {
         color: '#32AAE1', weight: 2.2, opacity: 0.55,
@@ -326,7 +338,7 @@ function renderMap() {
   // Draw tender lanes
   if (activeLayer !== 'existing') {
     TENDER_LANES.forEach((l, i) => {
-      if (activeOrigin !== 'ALL' && l.origin !== activeOrigin) return;
+      if (activeOrigins.size > 0 && !activeOrigins.has(l.origin)) return;
       const pts = arcPoints(l.orig_lat, l.orig_lng, l.dest_lat, l.dest_lng, 40);
       const line = L.polyline(pts, {
         color: '#FAB43C', weight: 3, opacity: 0.75,
@@ -346,7 +358,7 @@ function renderMap() {
   const allVisible = [
     ...(activeLayer !== 'tender' ? EXISTING_LANES : []),
     ...(activeLayer !== 'existing' ? TENDER_LANES : []),
-  ].filter(l => activeOrigin === 'ALL' || l.origin === activeOrigin);
+  ].filter(l => activeOrigins.size === 0 || activeOrigins.has(l.origin));
 
   allVisible.forEach(l => {
     const key = `${l.dest_lat},${l.dest_lng}`;
@@ -366,7 +378,7 @@ function renderMap() {
   });
 
   Object.entries(origCoords).forEach(([name, [lat, lng]]) => {
-    if (activeOrigin !== 'ALL' && name !== activeOrigin) return;
+    if (activeOrigins.size > 0 && !activeOrigins.has(name)) return;
     const exLanes = EXISTING_LANES.filter(l => l.origin === name);
     const tdLanes = TENDER_LANES.filter(l => l.origin === name);
     if (activeLayer === 'existing' && !exLanes.length) return;
@@ -405,32 +417,79 @@ function setLayer(layer, btn) {
 }
 
 function buildOriginPills() {
-  const allOrigins = new Set([
+  const allOrigins = [...new Set([
     ...EXISTING_LANES.map(l => l.origin),
     ...TENDER_LANES.map(l => l.origin),
-  ]);
-  const el = document.getElementById('origin-pills');
-  el.innerHTML = `<button class="op all-active" id="op-ALL" onclick="setOrigin('ALL')">All</button>`;
-  [...allOrigins].sort().forEach(o => {
-    el.innerHTML += `<button class="op" id="op-${o.replace(/\s/g,'-')}" onclick="setOrigin('${o}')">${o}</button>`;
+  ])].sort();
+
+  const el = document.getElementById('origin-list');
+  let html = `<div class="oc-all-row">
+    <span style="font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);font-weight:700;">ORIGINS</span>
+    <button class="oc-all-btn" onclick="selectAllOrigins()">Select All</button>
+    <button class="oc-all-btn" onclick="clearAllOrigins()">Clear</button>
+  </div>`;
+
+  allOrigins.forEach(o => {
+    const exCount = EXISTING_LANES.filter(l => l.origin === o).length;
+    const tdCount = TENDER_LANES.filter(l => l.origin === o).length;
+    const exBadge = exCount ? `<span class="oc-badge oc-badge-ex">${exCount}</span>` : '';
+    const tdBadge = tdCount ? `<span class="oc-badge oc-badge-td">+${tdCount}</span>` : '';
+    html += `<div class="oc-row" id="ocr-${o.replace(/\s/g,'-')}" onclick="toggleOrigin('${o}')">
+      <div class="oc-check"><svg viewBox="0 0 10 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4 4,7 9,1"/></svg></div>
+      <span class="oc-name">${o}</span>
+      <div class="oc-badges">${exBadge}${tdBadge}</div>
+    </div>`;
   });
+
+  el.innerHTML = html;
+}
+
+function toggleOrigin(origin) {
+  if (activeOrigins.has(origin)) {
+    activeOrigins.delete(origin);
+    const row = document.getElementById(`ocr-${origin.replace(/\s/g,'-')}`);
+    if (row) row.classList.remove('checked');
+  } else {
+    activeOrigins.add(origin);
+    const row = document.getElementById(`ocr-${origin.replace(/\s/g,'-')}`);
+    if (row) row.classList.add('checked');
+  }
+  renderMap();
+  buildLaneList();
+}
+
+function selectAllOrigins() {
+  const allOrigins = [...new Set([
+    ...EXISTING_LANES.map(l => l.origin),
+    ...TENDER_LANES.map(l => l.origin),
+  ])];
+  allOrigins.forEach(o => {
+    activeOrigins.add(o);
+    const row = document.getElementById(`ocr-${o.replace(/\s/g,'-')}`);
+    if (row) row.classList.add('checked');
+  });
+  renderMap();
+  buildLaneList();
+}
+
+function clearAllOrigins() {
+  activeOrigins.clear();
+  document.querySelectorAll('.oc-row').forEach(r => r.classList.remove('checked'));
+  renderMap();
+  buildLaneList();
 }
 
 function setOrigin(origin) {
-  activeOrigin = origin;
-  document.querySelectorAll('.op').forEach(p => p.classList.remove('active','all-active'));
-  const btn = document.getElementById(`op-${origin.replace(/\s/g,'-')}`);
-  if (btn) btn.classList.add(origin === 'ALL' ? 'all-active' : 'active');
-  renderMap();
-  buildLaneList();
+  // Called from map marker click — toggle that origin
+  toggleOrigin(origin);
 }
 
 // ── LANE LIST ─────────────────────────────────────────────────────────
 
 function buildLaneList() {
   const el = document.getElementById('lane-list');
-  const ex = activeLayer !== 'tender' ? EXISTING_LANES.filter(l => activeOrigin === 'ALL' || l.origin === activeOrigin) : [];
-  const td = activeLayer !== 'existing' ? TENDER_LANES.filter(l => activeOrigin === 'ALL' || l.origin === activeOrigin) : [];
+  const ex = activeLayer !== 'tender' ? EXISTING_LANES.filter(l => activeOrigins.size === 0 || activeOrigins.has(l.origin)) : [];
+  const td = activeLayer !== 'existing' ? TENDER_LANES.filter(l => activeOrigins.size === 0 || activeOrigins.has(l.origin)) : [];
 
   let html = '';
   if (td.length) {
