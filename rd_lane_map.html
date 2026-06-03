@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Restaurant Depot — Lane Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --pink:#E60080; --purple:#786EAF; --blue:#32AAE1;
+    --lime:#C8D23C; --orange:#FAB43C; --gray:#636569;
+    --bg:#F5F6F8; --surface:#FFFFFF; --surface2:#F0F2F5; --surface3:#E8EAF0;
+    --border:rgba(99,101,105,0.12); --border2:rgba(99,101,105,0.22);
+    --text:#1a1c1e; --text2:#4a4d52; --text3:#9095a0;
+    --accent:#32AAE1; --accent-light:rgba(50,170,225,0.10); --accent-dark:#1e8ab8;
+    --green-bg:rgba(74,154,85,0.10); --green:#4a9a55;
+    --red-bg:rgba(192,53,53,0.08); --red:#c03535;
+    --amber-bg:rgba(176,122,16,0.10); --amber:#b07a10;
+    --existing:#32AAE1; --tender:#FAB43C;
+    --radius:8px; --radius-lg:14px;
+    --shadow:0 1px 4px rgba(0,0,0,0.07),0 4px 16px rgba(0,0,0,0.04);
+    --shadow-md:0 2px 8px rgba(0,0,0,0.08),0 8px 24px rgba(0,0,0,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;}
+  .shell{display:flex;min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{width:265px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;}
+  .sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);background:#000;}
+  .logo-wordmark{font-size:28px;font-weight:800;letter-spacing:-0.03em;line-height:1;background:linear-gradient(90deg,#E60080 0%,#786EAF 30%,#32AAE1 55%,#C8D23C 78%,#FAB43C 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-member{font-size:10px;color:rgba(255,255,255,0.6);font-weight:600;letter-spacing:0.04em;text-transform:uppercase;margin-top:6px;}
+  .logo-app{font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;font-weight:600;}
+  .logo-app span{color:var(--amber);}
+  .sidebar-section{padding:16px 14px 8px;}
+  .s-label{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:0.14em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;padding:0 6px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13px;font-weight:600;transition:all 0.15s;border:none;background:none;width:100%;text-align:left;}
+  .nav-item:hover{background:var(--surface2);color:var(--text);}
+  .nav-item.active{background:var(--accent-light);color:var(--accent-dark);}
+  .nav-item svg{width:16px;height:16px;flex-shrink:0;}
+  .s-divider{height:1px;background:var(--border);margin:6px 14px;}
+
+  /* Legend */
+  .legend-block{padding:14px 20px;border-bottom:1px solid var(--border);}
+  .legend-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text2);}
+  .legend-row:last-child{margin-bottom:0;}
+  .leg-line{width:32px;height:3px;border-radius:2px;flex-shrink:0;}
+  .leg-existing{background:var(--blue);}
+  .leg-tender{background:var(--orange);}
+
+  /* Filter */
+  .filter-block{padding:14px 20px;}
+  .filter-row{margin-bottom:10px;}
+  .filter-row label{display:block;font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:5px;}
+  .filter-row select{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:7px 10px;font-size:12px;font-family:'Nunito',sans-serif;font-weight:600;appearance:none;outline:none;}
+  .filter-row select:focus{border-color:var(--blue);}
+
+  /* Origin pills */
+  .origin-pills{display:flex;flex-wrap:wrap;gap:5px;padding:0 20px 14px;}
+  .op{padding:4px 10px;border-radius:99px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all 0.15s;border:1px solid var(--border2);background:transparent;color:var(--text3);font-weight:500;}
+  .op:hover{border-color:var(--blue);color:var(--blue);}
+  .op.active{border-color:var(--blue);color:var(--blue);background:var(--accent-light);}
+  .op.all-active{border-color:var(--pink);color:var(--pink);background:rgba(230,0,128,0.08);}
+
+  /* Sidebar lane list */
+  .lane-list{flex:1;overflow-y:auto;padding:0 14px 16px;}
+  .lane-item{padding:8px 10px;border-radius:var(--radius);cursor:pointer;transition:all 0.15s;border:1px solid transparent;margin-bottom:4px;}
+  .lane-item:hover{background:var(--surface2);border-color:var(--border);}
+  .lane-item.active{background:var(--accent-light);border-color:rgba(50,170,225,0.3);}
+  .lane-item.tender-item:hover{background:rgba(250,180,60,0.08);border-color:rgba(250,180,60,0.3);}
+  .lane-item.tender-item.active{background:rgba(250,180,60,0.12);border-color:rgba(250,180,60,0.4);}
+  .li-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px;}
+  .li-meta{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);}
+  .li-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+  .dot-ex{background:var(--blue);}
+  .dot-td{background:var(--orange);}
+
+  /* Main */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:13px 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.04);position:sticky;top:0;z-index:10;}
+  .topbar-title{font-size:18px;font-weight:800;letter-spacing:-0.02em;}
+  .topbar-meta{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:1px;}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius);border:none;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+  .btn svg{width:14px;height:14px;flex-shrink:0;}
+  .btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border2);}
+  .btn-ghost:hover{background:var(--surface2);color:var(--text);}
+  .btn-primary{background:var(--blue);color:#fff;box-shadow:0 2px 8px rgba(50,170,225,0.28);}
+  .btn-primary:hover{background:var(--accent-dark);}
+  .btn-amber{background:rgba(250,180,60,0.15);color:#b07a10;border:1px solid rgba(250,180,60,0.35);}
+  .btn-amber:hover{background:rgba(250,180,60,0.25);}
+
+  /* Stats */
+  .stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:20px 28px 0;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 18px;box-shadow:var(--shadow);}
+  .stat-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
+  .stat-value{font-size:22px;font-weight:800;letter-spacing:-0.03em;}
+  .c-blue{color:var(--blue);} .c-orange{color:var(--orange);} .c-pink{color:var(--pink);} .c-green{color:var(--green);}
+
+  /* Map */
+  .content{flex:1;padding:20px 28px 40px;}
+  .grad-bar{height:3px;border-radius:99px;margin-bottom:18px;background:linear-gradient(90deg,#E60080,#786EAF,#32AAE1,#C8D23C,#FAB43C);}
+  #rd-map{width:100%;height:560px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);}
+
+  /* Detail panel */
+  .detail-panel{position:fixed;top:0;right:-420px;width:400px;height:100vh;background:var(--surface);border-left:1px solid var(--border);box-shadow:-4px 0 24px rgba(0,0,0,0.10);z-index:1001;display:flex;flex-direction:column;transition:right 0.3s cubic-bezier(0.4,0,0.2,1);}
+  .detail-panel.open{right:0;}
+  .detail-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;}
+  .detail-title{font-size:15px;font-weight:800;line-height:1.3;color:var(--text);}
+  .detail-sub{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:4px;}
+  .detail-close{width:28px;height:28px;border-radius:6px;border:1px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);flex-shrink:0;}
+  .detail-close:hover{background:var(--surface2);color:var(--text);}
+  .detail-body{flex:1;overflow-y:auto;padding:16px 20px 24px;}
+  .detail-section{margin-bottom:18px;}
+  .detail-section-title{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:0.14em;color:var(--text3);text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+  .detail-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);}
+  .detail-row:last-child{border-bottom:none;}
+  .detail-label{font-size:11px;color:var(--text3);font-weight:600;}
+  .detail-value{font-size:12px;color:var(--text);font-weight:700;font-family:'DM Mono',monospace;}
+  .detail-value.blue{color:var(--blue);}
+  .detail-value.orange{color:var(--orange);}
+  .type-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:11px;font-family:'DM Mono',monospace;font-weight:600;}
+  .badge-existing{background:var(--accent-light);color:var(--accent-dark);border:1px solid rgba(50,170,225,0.25);}
+  .badge-tender{background:rgba(250,180,60,0.15);color:#b07a10;border:1px solid rgba(250,180,60,0.35);}
+
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.15);z-index:1000;display:none;}
+  .overlay.show{display:block;}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:10px;transform:translateY(80px);opacity:0;transition:all 0.25s;box-shadow:var(--shadow-md);z-index:999;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  .tdot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;}
+
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:99px;}
+
+  .leaflet-tooltip.lane-tooltip{background:rgba(26,28,30,0.9);border:none;box-shadow:none;border-radius:6px;padding:6px 10px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;color:#fff;}
+  .leaflet-tooltip.lane-tooltip::before{display:none;}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-wordmark">Ligentia</div>
+      <div class="logo-member">Member of ASYAD Group</div>
+      <div class="logo-app">Restaurant Depot — <span>Lane Map</span></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="s-label">Map Layers</div>
+      <button class="nav-item active" id="nav-all" onclick="setLayer('all',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        All Lanes
+      </button>
+      <button class="nav-item" id="nav-existing" onclick="setLayer('existing',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Ongoing Lanes
+      </button>
+      <button class="nav-item" id="nav-tender" onclick="setLayer('tender',this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        New Tenders
+      </button>
+    </div>
+
+    <div class="s-divider"></div>
+
+    <div class="legend-block">
+      <div class="s-label" style="margin-bottom:10px;">Legend</div>
+      <div class="legend-row"><div class="leg-line leg-existing"></div>Ongoing lane (from Excel)</div>
+      <div class="legend-row"><div class="leg-line leg-tender"></div>New tender (from email)</div>
+    </div>
+
+    <div class="s-divider"></div>
+
+    <div class="filter-block">
+      <div class="s-label" style="margin-bottom:10px;">Filter by origin</div>
+    </div>
+    <div class="origin-pills" id="origin-pills"></div>
+
+    <div class="s-divider"></div>
+    <div class="sidebar-section"><div class="s-label">Lanes</div></div>
+    <div class="lane-list" id="lane-list"></div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Restaurant Depot — Lane Intelligence</div>
+        <div class="topbar-meta">90 ongoing lanes · RD - New Lanes tenders from Apr 15 2026</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="fitAll()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h7v7H3z"/><path d="M14 3h7v7h-7z"/><path d="M14 14h7v7h-7z"/><path d="M3 14h7v7H3z"/></svg>
+          Fit All
+        </button>
+        <button class="btn btn-amber" onclick="setLayer('tender',document.getElementById('nav-tender'))">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Show New Tenders
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-bar">
+      <div class="stat-card"><div class="stat-label">Ongoing Lanes</div><div class="stat-value c-blue" id="stat-ex">90</div></div>
+      <div class="stat-card"><div class="stat-label">New Tenders (Apr 15+)</div><div class="stat-value c-orange" id="stat-td">9</div></div>
+      <div class="stat-card"><div class="stat-label">Origin Hubs</div><div class="stat-value c-pink" id="stat-hub">9</div></div>
+      <div class="stat-card"><div class="stat-label">Total Jobs (Ongoing)</div><div class="stat-value c-green" id="stat-jobs">320</div></div>
+    </div>
+
+    <div class="content">
+      <div class="grad-bar"></div>
+      <div id="rd-map"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <div>
+      <div class="detail-title" id="dp-title">—</div>
+      <div class="detail-sub" id="dp-sub">—</div>
+    </div>
+    <button class="detail-close" onclick="closeDetail()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="detail-body" id="dp-body"></div>
+</div>
+<div class="toast" id="toast"><div class="tdot"></div><span id="tmsg">Done</span></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────
+
+const EXISTING_LANES = [{"lane":"RICHLAND - PHOENIX","origin":"RICHLAND","dest":"PHOENIX","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":33.4484,"dest_lng":-112.074,"jobs":1,"avg_rev":3716},{"lane":"WARDEN - FORT WORTH","origin":"WARDEN","dest":"FORT WORTH","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":32.7555,"dest_lng":-97.3308,"jobs":2,"avg_rev":5678},{"lane":"WARDEN - WALNUT","origin":"WARDEN","dest":"WALNUT","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":34.022,"dest_lng":-117.8672,"jobs":1,"avg_rev":2595},{"lane":"WARDEN - TULSA","origin":"WARDEN","dest":"TULSA","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":36.154,"dest_lng":-95.9928,"jobs":1,"avg_rev":5424},{"lane":"WARDEN - TOMBALL","origin":"WARDEN","dest":"TOMBALL","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":30.0974,"dest_lng":-95.6163,"jobs":1,"avg_rev":5895},{"lane":"RICHLAND - ALBUQUERQUE","origin":"RICHLAND","dest":"ALBUQUERQUE","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":35.0844,"dest_lng":-106.6504,"jobs":1,"avg_rev":5372},{"lane":"WARDEN - ANAHEIM","origin":"WARDEN","dest":"ANAHEIM","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":33.8353,"dest_lng":-117.9145,"jobs":2,"avg_rev":2595},{"lane":"WARDEN - LEWISVILLE","origin":"WARDEN","dest":"LEWISVILLE","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":33.0462,"dest_lng":-96.9942,"jobs":2,"avg_rev":5595},{"lane":"WARDEN - FRESNO","origin":"WARDEN","dest":"FRESNO","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":36.7378,"dest_lng":-119.7871,"jobs":1,"avg_rev":2175},{"lane":"WARDEN - HUNTINGTON BEACH","origin":"WARDEN","dest":"HUNTINGTON BEACH","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":33.6603,"dest_lng":-117.9992,"jobs":1,"avg_rev":2750},{"lane":"WARDEN - SAN ANTONIO","origin":"WARDEN","dest":"SAN ANTONIO","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":29.4241,"dest_lng":-98.4936,"jobs":7,"avg_rev":6014},{"lane":"WARDEN - HOUSTON","origin":"WARDEN","dest":"HOUSTON","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":29.7604,"dest_lng":-95.3698,"jobs":8,"avg_rev":6168},{"lane":"PASCO - LOS ANGELES","origin":"PASCO","dest":"LOS ANGELES","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":34.0522,"dest_lng":-118.2437,"jobs":1,"avg_rev":2475},{"lane":"WARDEN - PASADENA","origin":"WARDEN","dest":"PASADENA","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":34.1478,"dest_lng":-118.1445,"jobs":9,"avg_rev":6154},{"lane":"WARDEN - AUSTIN","origin":"WARDEN","dest":"AUSTIN","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":30.2672,"dest_lng":-97.7431,"jobs":8,"avg_rev":5884},{"lane":"WARDEN - RICHARDSON","origin":"WARDEN","dest":"RICHARDSON","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":32.9483,"dest_lng":-96.7299,"jobs":15,"avg_rev":5736},{"lane":"WARDEN - DALLAS","origin":"WARDEN","dest":"DALLAS","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":32.7767,"dest_lng":-96.797,"jobs":8,"avg_rev":5757},{"lane":"PORTLAND - NEW ORLEANS","origin":"PORTLAND","dest":"NEW ORLEANS","orig_lat":45.5051,"orig_lng":-122.675,"dest_lat":29.9511,"dest_lng":-90.0715,"jobs":1,"avg_rev":4250},{"lane":"RICHLAND - COLTON","origin":"RICHLAND","dest":"COLTON","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":34.0739,"dest_lng":-117.3136,"jobs":1,"avg_rev":2824},{"lane":"WARDEN - COLTON","origin":"WARDEN","dest":"COLTON","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":34.0739,"dest_lng":-117.3136,"jobs":1,"avg_rev":2595},{"lane":"RICHLAND - LAS VEGAS","origin":"RICHLAND","dest":"LAS VEGAS","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":36.1699,"dest_lng":-115.1398,"jobs":6,"avg_rev":2511},{"lane":"RICHLAND - MESA","origin":"RICHLAND","dest":"MESA","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":33.4152,"dest_lng":-111.8315,"jobs":2,"avg_rev":3245},{"lane":"PASCO - DALLAS","origin":"PASCO","dest":"DALLAS","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":32.7767,"dest_lng":-96.797,"jobs":3,"avg_rev":5211},{"lane":"WARDEN - LOS ANGELES","origin":"WARDEN","dest":"LOS ANGELES","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":34.0522,"dest_lng":-118.2437,"jobs":1,"avg_rev":2595},{"lane":"YERINGTON - VERNON","origin":"YERINGTON","dest":"VERNON","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":34.0,"dest_lng":-118.22,"jobs":1,"avg_rev":1734},{"lane":"YERINGTON - WALNUT","origin":"YERINGTON","dest":"WALNUT","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":34.022,"dest_lng":-117.8672,"jobs":1,"avg_rev":1734},{"lane":"PASCO - COLTON","origin":"PASCO","dest":"COLTON","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":34.0739,"dest_lng":-117.3136,"jobs":3,"avg_rev":2606},{"lane":"RICHLAND - SAN JOSE","origin":"RICHLAND","dest":"SAN JOSE","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":37.3382,"dest_lng":-121.8863,"jobs":3,"avg_rev":2225},{"lane":"RICHLAND - ANAHEIM","origin":"RICHLAND","dest":"ANAHEIM","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":33.8353,"dest_lng":-117.9145,"jobs":11,"avg_rev":2608},{"lane":"PASCO - HOUSTON","origin":"PASCO","dest":"HOUSTON","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":29.7604,"dest_lng":-95.3698,"jobs":5,"avg_rev":5430},{"lane":"PASCO - FORT WORTH","origin":"PASCO","dest":"FORT WORTH","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":32.7555,"dest_lng":-97.3308,"jobs":5,"avg_rev":5549},{"lane":"YERINGTON - HUNTINGTON BEACH","origin":"YERINGTON","dest":"HUNTINGTON BEACH","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":33.6603,"dest_lng":-117.9992,"jobs":2,"avg_rev":1300},{"lane":"RICHLAND - OAKLAND","origin":"RICHLAND","dest":"OAKLAND","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":37.8044,"dest_lng":-122.2712,"jobs":1,"avg_rev":2225},{"lane":"SILVER SPRINGS - WILMINGTON","origin":"SILVER SPRINGS","dest":"WILMINGTON","orig_lat":39.4157,"orig_lng":-119.229,"dest_lat":34.2257,"dest_lng":-77.9447,"jobs":1,"avg_rev":1750},{"lane":"RICHLAND - TORRANCE","origin":"RICHLAND","dest":"TORRANCE","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":33.8358,"dest_lng":-118.3406,"jobs":8,"avg_rev":2922},{"lane":"RICHLAND - WALNUT","origin":"RICHLAND","dest":"WALNUT","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":34.022,"dest_lng":-117.8672,"jobs":13,"avg_rev":3001},{"lane":"RICHLAND - LONG BEACH","origin":"RICHLAND","dest":"LONG BEACH","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":33.7701,"dest_lng":-118.1937,"jobs":9,"avg_rev":2889},{"lane":"RICHLAND - LOS ANGELES","origin":"RICHLAND","dest":"LOS ANGELES","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":34.0522,"dest_lng":-118.2437,"jobs":2,"avg_rev":3395},{"lane":"RICHLAND - HUNTINGTON BEACH","origin":"RICHLAND","dest":"HUNTINGTON BEACH","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":33.6603,"dest_lng":-117.9992,"jobs":9,"avg_rev":2954},{"lane":"PASCO - PASADENA","origin":"PASCO","dest":"PASADENA","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":34.1478,"dest_lng":-118.1445,"jobs":4,"avg_rev":4742},{"lane":"RICHLAND - TUCSON","origin":"RICHLAND","dest":"TUCSON","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":32.2226,"dest_lng":-110.9747,"jobs":2,"avg_rev":4547},{"lane":"PASCO - LEWISVILLE","origin":"PASCO","dest":"LEWISVILLE","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":33.0462,"dest_lng":-96.9942,"jobs":1,"avg_rev":5681},{"lane":"WARDEN - GREENWOOD VILLAGE","origin":"WARDEN","dest":"GREENWOOD VILLAGE","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":39.6136,"dest_lng":-104.9253,"jobs":7,"avg_rev":4150},{"lane":"YERINGTON - PASADENA","origin":"YERINGTON","dest":"PASADENA","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":34.1478,"dest_lng":-118.1445,"jobs":1,"avg_rev":1300},{"lane":"YERINGTON - LOS ANGELES","origin":"YERINGTON","dest":"LOS ANGELES","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":34.0522,"dest_lng":-118.2437,"jobs":4,"avg_rev":1343},{"lane":"RICHLAND - VERNON","origin":"RICHLAND","dest":"VERNON","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":34.0,"dest_lng":-118.22,"jobs":4,"avg_rev":3016},{"lane":"ARBUCKLE - ANAHEIM","origin":"ARBUCKLE","dest":"ANAHEIM","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":33.8353,"dest_lng":-117.9145,"jobs":1,"avg_rev":1200},{"lane":"PASCO - WALNUT","origin":"PASCO","dest":"WALNUT","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":34.022,"dest_lng":-117.8672,"jobs":2,"avg_rev":2450},{"lane":"PASCO - SAN ANTONIO","origin":"PASCO","dest":"SAN ANTONIO","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":29.4241,"dest_lng":-98.4936,"jobs":5,"avg_rev":5815},{"lane":"SILVER SPRINGS - UNION","origin":"SILVER SPRINGS","dest":"UNION","orig_lat":39.4157,"orig_lng":-119.229,"dest_lat":40.6973,"dest_lng":-74.2643,"jobs":1,"avg_rev":1595},{"lane":"YERINGTON - TORRANCE","origin":"YERINGTON","dest":"TORRANCE","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":33.8358,"dest_lng":-118.3406,"jobs":4,"avg_rev":1325},{"lane":"YERINGTON - SAN DIEGO","origin":"YERINGTON","dest":"SAN DIEGO","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":32.7157,"dest_lng":-117.1611,"jobs":1,"avg_rev":1700},{"lane":"ARBUCKLE - SAN DIEGO","origin":"ARBUCKLE","dest":"SAN DIEGO","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":32.7157,"dest_lng":-117.1611,"jobs":3,"avg_rev":1866},{"lane":"YERINGTON - VAN NUYS","origin":"YERINGTON","dest":"VAN NUYS","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":34.1897,"dest_lng":-118.4512,"jobs":2,"avg_rev":1247},{"lane":"PASCO - NEW ORLEANS","origin":"PASCO","dest":"NEW ORLEANS","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":29.9511,"dest_lng":-90.0715,"jobs":2,"avg_rev":6737},{"lane":"PASCO - AUSTIN","origin":"PASCO","dest":"AUSTIN","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":30.2672,"dest_lng":-97.7431,"jobs":24,"avg_rev":6024},{"lane":"PASCO - FORTH WORTH","origin":"PASCO","dest":"FORTH WORTH","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":32.7555,"dest_lng":-97.3308,"jobs":1,"avg_rev":4995},{"lane":"PASCO - FRESNO","origin":"PASCO","dest":"FRESNO","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":36.7378,"dest_lng":-119.7871,"jobs":3,"avg_rev":1895},{"lane":"PASCO - SAN JOSE","origin":"PASCO","dest":"SAN JOSE","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":37.3382,"dest_lng":-121.8863,"jobs":6,"avg_rev":1960},{"lane":"ARBUCKLE - HUNTINGTON BEACH","origin":"ARBUCKLE","dest":"HUNTINGTON BEACH","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":33.6603,"dest_lng":-117.9992,"jobs":3,"avg_rev":1441},{"lane":"RICHLAND - FRESNO","origin":"RICHLAND","dest":"FRESNO","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":36.7378,"dest_lng":-119.7871,"jobs":1,"avg_rev":2175},{"lane":"ARBUCKLE - TORRANCE","origin":"ARBUCKLE","dest":"TORRANCE","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":33.8358,"dest_lng":-118.3406,"jobs":3,"avg_rev":1441},{"lane":"GRAND PRAIRIE - TOMBALL","origin":"GRAND PRAIRIE","dest":"TOMBALL","orig_lat":32.746,"orig_lng":-97.0011,"dest_lat":30.0974,"dest_lng":-95.6163,"jobs":2,"avg_rev":975},{"lane":"PASCO - SAN FRANCISCO","origin":"PASCO","dest":"SAN FRANCISCO","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":37.7749,"dest_lng":-122.4194,"jobs":10,"avg_rev":2110},{"lane":"SILVER SPRINGS - ALEXANDRIA","origin":"SILVER SPRINGS","dest":"ALEXANDRIA","orig_lat":39.4157,"orig_lng":-119.229,"dest_lat":38.8048,"dest_lng":-77.0469,"jobs":1,"avg_rev":1945},{"lane":"YERINGTON - LONG BEACH","origin":"YERINGTON","dest":"LONG BEACH","orig_lat":38.9874,"orig_lng":-119.1627,"dest_lat":33.7701,"dest_lng":-118.1937,"jobs":1,"avg_rev":-135},{"lane":"PASCO - CONCORD","origin":"PASCO","dest":"CONCORD","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":37.978,"dest_lng":-122.0311,"jobs":4,"avg_rev":2043},{"lane":"RICHLAND - FIFE","origin":"RICHLAND","dest":"FIFE","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":47.2365,"dest_lng":-122.3587,"jobs":1,"avg_rev":1275},{"lane":"PASCO - OAKLAND","origin":"PASCO","dest":"OAKLAND","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":37.8044,"dest_lng":-122.2712,"jobs":7,"avg_rev":1917},{"lane":"ARBUCKLE - VAN NUYS","origin":"ARBUCKLE","dest":"VAN NUYS","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":34.1897,"dest_lng":-118.4512,"jobs":3,"avg_rev":1683},{"lane":"PASCO - RICHARDSON","origin":"PASCO","dest":"RICHARDSON","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":32.9483,"dest_lng":-96.7299,"jobs":2,"avg_rev":5735},{"lane":"PASCO - SACRAMENTO","origin":"PASCO","dest":"SACRAMENTO","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":38.5816,"dest_lng":-121.4944,"jobs":7,"avg_rev":2012},{"lane":"ARBUCKLE - WALNUT","origin":"ARBUCKLE","dest":"WALNUT","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":34.022,"dest_lng":-117.8672,"jobs":3,"avg_rev":1683},{"lane":"PASCO - TULSA","origin":"PASCO","dest":"TULSA","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":36.154,"dest_lng":-95.9928,"jobs":1,"avg_rev":4775},{"lane":"GRAND PRAIRIE - HOUSTON","origin":"GRAND PRAIRIE","dest":"HOUSTON","orig_lat":32.746,"orig_lng":-97.0011,"dest_lat":29.7604,"dest_lng":-95.3698,"jobs":6,"avg_rev":975},{"lane":"PASCO - HUNTINGTON BEACH","origin":"PASCO","dest":"HUNTINGTON BEACH","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":33.6603,"dest_lng":-117.9992,"jobs":1,"avg_rev":2450},{"lane":"RICHLAND - PASADENA","origin":"RICHLAND","dest":"RICHLAND - PASADENA","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":34.1478,"dest_lng":-118.1445,"jobs":5,"avg_rev":3153},{"lane":"GRAND PRAIRIE - PASADENA","origin":"GRAND PRAIRIE","dest":"PASADENA","orig_lat":32.746,"orig_lng":-97.0011,"dest_lat":34.1478,"dest_lng":-118.1445,"jobs":1,"avg_rev":975},{"lane":"CARSON - SAN DIEGO","origin":"CARSON","dest":"SAN DIEGO","orig_lat":33.8317,"orig_lng":-118.2817,"dest_lat":32.7157,"dest_lng":-117.1611,"jobs":8,"avg_rev":1156},{"lane":"ARBUCKLE - LONG BEACH","origin":"ARBUCKLE","dest":"LONG BEACH","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":33.7701,"dest_lng":-118.1937,"jobs":2,"avg_rev":1925},{"lane":"RICHLAND - CLACKAMAS","origin":"RICHLAND","dest":"CLACKAMAS","orig_lat":46.2857,"orig_lng":-119.2845,"dest_lat":45.4051,"dest_lng":-122.5649,"jobs":1,"avg_rev":2395},{"lane":"WARDEN - MESA","origin":"WARDEN","dest":"MESA","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":33.4152,"dest_lng":-111.8315,"jobs":1,"avg_rev":4495},{"lane":"WARDEN - SAN DIEGO","origin":"WARDEN","dest":"SAN DIEGO","orig_lat":46.9704,"orig_lng":-119.0418,"dest_lat":32.7157,"dest_lng":-117.1611,"jobs":1,"avg_rev":4395},{"lane":"PASCO - VAN NUYS","origin":"PASCO","dest":"VAN NUYS","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":34.1897,"dest_lng":-118.4512,"jobs":1,"avg_rev":2300},{"lane":"PORTLAND - OKLAHOMA CITY","origin":"PORTLAND","dest":"OKLAHOMA CITY","orig_lat":45.5051,"orig_lng":-122.675,"dest_lat":35.4676,"dest_lng":-97.5164,"jobs":1,"avg_rev":2885},{"lane":"ARBUCKLE - PASADENA","origin":"ARBUCKLE","dest":"PASADENA","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":34.1478,"dest_lng":-118.1445,"jobs":2,"avg_rev":1562},{"lane":"ARBUCKLE - LOS ANGELES","origin":"ARBUCKLE","dest":"LOS ANGELES","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":34.0522,"dest_lng":-118.2437,"jobs":1,"avg_rev":1925},{"lane":"ARBUCKLE - VERNON","origin":"ARBUCKLE","dest":"VERNON","orig_lat":39.016,"orig_lng":-122.0588,"dest_lat":34.0,"dest_lng":-118.22,"jobs":1,"avg_rev":1925},{"lane":"SILVER SPRINGS - SOUTH PLAINFIELD","origin":"SILVER SPRINGS","dest":"SOUTH PLAINFIELD","orig_lat":39.4157,"orig_lng":-119.229,"dest_lat":40.5773,"dest_lng":-74.4182,"jobs":1,"avg_rev":1745},{"lane":"PASCO - ROSEVILLE","origin":"PASCO","dest":"ROSEVILLE","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":38.7521,"dest_lng":-121.288,"jobs":1,"avg_rev":2300},{"lane":"PASCO - STOCKTON","origin":"PASCO","dest":"STOCKTON","orig_lat":46.2396,"orig_lng":-119.1006,"dest_lat":37.9577,"dest_lng":-121.2908,"jobs":1,"avg_rev":2300}];
+
+// Tenders extracted from RD - New Lanes emails (Apr 15 2026+)
+const TENDER_LANES = [
+  {lane:"HUMBOLDT TN - HICKSVILLE NY",origin:"HUMBOLDT",dest:"HICKSVILLE",orig_lat:35.8200,orig_lng:-88.9170,dest_lat:40.7635,dest_lng:-73.5254,ref:"#556136",amount:5550,pickup:"06/15/2026",delivery:"06/17/2026"},
+  {lane:"ARBUCKLE CA - FIFE WA",origin:"ARBUCKLE",dest:"FIFE",orig_lat:39.016,orig_lng:-122.0588,dest_lat:47.2365,dest_lng:-122.3587,ref:"#554621",amount:3595,pickup:"06/08/2026",delivery:"06/09/2026"},
+  {lane:"ARBUCKLE CA - SAN DIEGO CA",origin:"ARBUCKLE",dest:"SAN DIEGO",orig_lat:39.016,orig_lng:-122.0588,dest_lat:32.7157,dest_lng:-117.1611,ref:"#553708",amount:2100,pickup:"06/04/2026",delivery:"06/04/2026"},
+  {lane:"ARBUCKLE CA - WOODINVILLE WA",origin:"ARBUCKLE",dest:"WOODINVILLE",orig_lat:39.016,orig_lng:-122.0588,dest_lat:47.7543,dest_lng:-122.1635,ref:"#553697",amount:3595,pickup:"06/03/2026",delivery:"06/05/2026"},
+  {lane:"ARBUCKLE CA - VERNON CA",origin:"ARBUCKLE",dest:"VERNON",orig_lat:39.016,orig_lng:-122.0588,dest_lat:34.0,dest_lng:-118.22,ref:"#555977",amount:1925,pickup:"06/11/2026",delivery:"06/11/2026"},
+  {lane:"ARBUCKLE CA - LONG BEACH CA",origin:"ARBUCKLE",dest:"LONG BEACH",orig_lat:39.016,orig_lng:-122.0588,dest_lat:33.7701,dest_lng:-118.1937,ref:"#552764",amount:1925,pickup:"06/01/2026",delivery:"06/01/2026"},
+  {lane:"PASCO WA - SACRAMENTO CA",origin:"PASCO",dest:"SACRAMENTO",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:38.5816,dest_lng:-121.4944,ref:"#555975",amount:2200,pickup:"06/09/2026",delivery:"06/10/2026"},
+  {lane:"PASCO WA - CONCORD CA",origin:"PASCO",dest:"CONCORD",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:37.978,dest_lng:-122.0311,ref:"#552799",amount:2150,pickup:"05/30/2026",delivery:"05/31/2026"},
+  {lane:"PASCO WA - STOCKTON CA",origin:"PASCO",dest:"STOCKTON",orig_lat:46.2396,orig_lng:-119.1006,dest_lat:37.9577,dest_lng:-121.2908,ref:"#549242",amount:2200,pickup:"05/25/2026",delivery:"05/26/2026"},
+];
+
+// ── MAP SETUP ─────────────────────────────────────────────────────────
+
+let rdMap, layerGroup, markerGroup;
+let activeLayer = 'all';
+let activeOrigin = 'ALL';
+
+function initMap() {
+  rdMap = L.map('rd-map', {
+    center: [38.5, -108], zoom: 4,
+    scrollWheelZoom: true, preferCanvas: true,
+  });
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
+  }).addTo(rdMap);
+
+  layerGroup  = L.layerGroup().addTo(rdMap);
+  markerGroup = L.layerGroup().addTo(rdMap);
+
+  renderMap();
+  buildOriginPills();
+  buildLaneList();
+}
+
+function arcPoints(lat1, lng1, lat2, lng2, steps) {
+  // Great-circle-ish arc lifted slightly northward for visual clarity
+  const pts = [];
+  const midLat = (lat1 + lat2) / 2 + Math.abs(lat1 - lat2) * 0.2 + 2;
+  const midLng = (lng1 + lng2) / 2;
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const lat = (1-t)*(1-t)*lat1 + 2*(1-t)*t*midLat + t*t*lat2;
+    const lng = (1-t)*(1-t)*lng1 + 2*(1-t)*t*midLng + t*t*lng2;
+    pts.push([lat, lng]);
+  }
+  return pts;
+}
+
+function renderMap() {
+  layerGroup.clearLayers();
+  markerGroup.clearLayers();
+
+  const originSet = new Set();
+
+  // Draw existing lanes
+  if (activeLayer !== 'tender') {
+    EXISTING_LANES.forEach((l, i) => {
+      if (activeOrigin !== 'ALL' && l.origin !== activeOrigin) return;
+      const pts = arcPoints(l.orig_lat, l.orig_lng, l.dest_lat, l.dest_lng, 40);
+      const line = L.polyline(pts, {
+        color: '#32AAE1', weight: 2.2, opacity: 0.55,
+        className: 'lane-line-ex',
+      });
+      line.bindTooltip(`<b>${l.lane}</b><br/>Jobs: ${l.jobs} · Avg Rev: $${l.avg_rev.toLocaleString()}`, {className:'lane-tooltip', sticky:true});
+      line.on('click', () => openDetail(l, 'existing'));
+      line.on('mouseover', function() { this.setStyle({opacity:1, weight:3.5}); });
+      line.on('mouseout',  function() { this.setStyle({opacity:0.55, weight:2.2}); });
+      layerGroup.addLayer(line);
+      originSet.add(l.origin);
+    });
+  }
+
+  // Draw tender lanes
+  if (activeLayer !== 'existing') {
+    TENDER_LANES.forEach((l, i) => {
+      if (activeOrigin !== 'ALL' && l.origin !== activeOrigin) return;
+      const pts = arcPoints(l.orig_lat, l.orig_lng, l.dest_lat, l.dest_lng, 40);
+      const line = L.polyline(pts, {
+        color: '#FAB43C', weight: 3, opacity: 0.75,
+        dashArray: '8 4',
+      });
+      line.bindTooltip(`<b>${l.lane}</b><br/>Ref: ${l.ref} · Amount: $${l.amount.toLocaleString()}<br/>Pickup: ${l.pickup}`, {className:'lane-tooltip', sticky:true});
+      line.on('click', () => openDetail(l, 'tender'));
+      line.on('mouseover', function() { this.setStyle({opacity:1, weight:4.5}); });
+      line.on('mouseout',  function() { this.setStyle({opacity:0.75, weight:3}); });
+      layerGroup.addLayer(line);
+      originSet.add(l.origin);
+    });
+  }
+
+  // Draw origin markers
+  const origCoords = {};
+  [...EXISTING_LANES, ...TENDER_LANES].forEach(l => {
+    if (!origCoords[l.origin]) origCoords[l.origin] = [l.orig_lat, l.orig_lng];
+  });
+
+  Object.entries(origCoords).forEach(([name, [lat, lng]]) => {
+    if (activeOrigin !== 'ALL' && name !== activeOrigin) return;
+    const exLanes = EXISTING_LANES.filter(l => l.origin === name);
+    const tdLanes = TENDER_LANES.filter(l => l.origin === name);
+    if ((activeLayer === 'existing' && !exLanes.length) ||
+        (activeLayer === 'tender'   && !tdLanes.length)) return;
+
+    const isEast = lng > -90;
+    const marker = L.circleMarker([lat, lng], {
+      radius: 8, fillColor: isEast ? '#FAB43C' : '#E60080',
+      color: '#fff', weight: 2, fillOpacity: 0.95,
+    });
+    marker.bindTooltip(`<b>${name}</b><br/>${exLanes.length} ongoing · ${tdLanes.length} tenders`, {className:'lane-tooltip', sticky:true});
+    markerGroup.addLayer(marker);
+  });
+
+  // Destination dots (small)
+  const destSet = new Set();
+  const allVisible = [
+    ...(activeLayer !== 'tender' ? EXISTING_LANES : []),
+    ...(activeLayer !== 'existing' ? TENDER_LANES : []),
+  ].filter(l => activeOrigin === 'ALL' || l.origin === activeOrigin);
+
+  allVisible.forEach(l => {
+    const key = `${l.dest_lat},${l.dest_lng}`;
+    if (destSet.has(key)) return;
+    destSet.add(key);
+    const isTender = 'ref' in l;
+    L.circleMarker([l.dest_lat, l.dest_lng], {
+      radius: 5, fillColor: isTender ? '#FAB43C' : '#32AAE1',
+      color: '#fff', weight: 1.5, fillOpacity: 0.75,
+    }).addTo(markerGroup);
+  });
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────────
+
+function setLayer(layer, btn) {
+  activeLayer = layer;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderMap();
+  buildLaneList();
+}
+
+function buildOriginPills() {
+  const allOrigins = new Set([
+    ...EXISTING_LANES.map(l => l.origin),
+    ...TENDER_LANES.map(l => l.origin),
+  ]);
+  const el = document.getElementById('origin-pills');
+  el.innerHTML = `<button class="op all-active" id="op-ALL" onclick="setOrigin('ALL')">All</button>`;
+  [...allOrigins].sort().forEach(o => {
+    el.innerHTML += `<button class="op" id="op-${o.replace(/\s/g,'-')}" onclick="setOrigin('${o}')">${o}</button>`;
+  });
+}
+
+function setOrigin(origin) {
+  activeOrigin = origin;
+  document.querySelectorAll('.op').forEach(p => p.classList.remove('active','all-active'));
+  const btn = document.getElementById(`op-${origin.replace(/\s/g,'-')}`);
+  if (btn) btn.classList.add(origin === 'ALL' ? 'all-active' : 'active');
+  renderMap();
+  buildLaneList();
+}
+
+// ── LANE LIST ─────────────────────────────────────────────────────────
+
+function buildLaneList() {
+  const el = document.getElementById('lane-list');
+  const ex = activeLayer !== 'tender' ? EXISTING_LANES.filter(l => activeOrigin === 'ALL' || l.origin === activeOrigin) : [];
+  const td = activeLayer !== 'existing' ? TENDER_LANES.filter(l => activeOrigin === 'ALL' || l.origin === activeOrigin) : [];
+
+  let html = '';
+  if (td.length) {
+    html += `<div class="s-label" style="margin:10px 6px 6px;">New Tenders</div>`;
+    td.forEach((l,i) => {
+      html += `<div class="lane-item tender-item" id="li-td-${i}" onclick="openDetail(TENDER_LANES[${TENDER_LANES.indexOf(l)}],'tender')">
+        <div class="li-name"><span class="li-dot dot-td"></span>${l.lane}</div>
+        <div class="li-meta">${l.ref} · $${l.amount.toLocaleString()} · ${l.pickup}</div>
+      </div>`;
+    });
+  }
+  if (ex.length) {
+    html += `<div class="s-label" style="margin:10px 6px 6px;">Ongoing (${ex.length})</div>`;
+    ex.forEach((l,i) => {
+      html += `<div class="lane-item" id="li-ex-${i}" onclick="openDetail(EXISTING_LANES[${EXISTING_LANES.indexOf(l)}],'existing')">
+        <div class="li-name"><span class="li-dot dot-ex"></span>${l.lane}</div>
+        <div class="li-meta">${l.jobs} job${l.jobs!==1?'s':''} · avg $${l.avg_rev.toLocaleString()}/load</div>
+      </div>`;
+    });
+  }
+  el.innerHTML = html || '<div style="padding:10px 6px;font-size:12px;color:var(--text3);">No lanes match filter.</div>';
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────────────────
+
+function openDetail(l, type) {
+  const isEx = type === 'existing';
+  document.getElementById('dp-title').textContent = l.lane;
+  document.getElementById('dp-sub').textContent = isEx ? `Ongoing Lane · ${l.jobs} job${l.jobs!==1?'s':''}` : `New Tender · ${l.ref}`;
+
+  let html = `<div class="detail-section">
+    <div class="detail-section-title">Lane</div>
+    <div class="detail-row"><span class="detail-label">Type</span>
+      <span class="type-badge ${isEx?'badge-existing':'badge-tender'}">${isEx?'Ongoing':'New Tender'}</span>
+    </div>
+    <div class="detail-row"><span class="detail-label">Origin</span><span class="detail-value ${isEx?'blue':'orange'}">${l.origin}</span></div>
+    <div class="detail-row"><span class="detail-label">Destination</span><span class="detail-value">${l.dest}</span></div>`;
+
+  if (isEx) {
+    html += `<div class="detail-row"><span class="detail-label">Jobs (historical)</span><span class="detail-value">${l.jobs}</span></div>
+    <div class="detail-row"><span class="detail-label">Avg Revenue / Load</span><span class="detail-value">$${l.avg_rev.toLocaleString()}</span></div>`;
+  } else {
+    html += `<div class="detail-row"><span class="detail-label">Customer Ref</span><span class="detail-value">${l.ref}</span></div>
+    <div class="detail-row"><span class="detail-label">Tender Amount</span><span class="detail-value orange">$${l.amount.toLocaleString()}</span></div>
+    <div class="detail-row"><span class="detail-label">Pickup Date</span><span class="detail-value">${l.pickup}</span></div>
+    <div class="detail-row"><span class="detail-label">Delivery Date</span><span class="detail-value">${l.delivery}</span></div>`;
+  }
+
+  html += `</div><div class="detail-section">
+    <div class="detail-section-title">Coordinates</div>
+    <div class="detail-row"><span class="detail-label">Origin</span><span class="detail-value">${l.orig_lat.toFixed(2)}°N, ${Math.abs(l.orig_lng).toFixed(2)}°W</span></div>
+    <div class="detail-row"><span class="detail-label">Destination</span><span class="detail-value">${l.dest_lat.toFixed(2)}°N, ${Math.abs(l.dest_lng).toFixed(2)}°W</span></div>
+  </div>`;
+
+  document.getElementById('dp-body').innerHTML = html;
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+
+  // Fly map to lane
+  rdMap.flyToBounds([[l.orig_lat, l.orig_lng],[l.dest_lat, l.dest_lng]], {padding:[60,60], maxZoom:7, duration:0.8});
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function fitAll() {
+  rdMap.flyTo([38.5, -108], 4, {duration:0.8});
+  closeDetail();
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+window.addEventListener('load', initMap);
+</script>
+</body>
+</html>
