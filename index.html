@@ -341,29 +341,7 @@ function renderMap() {
     });
   }
 
-  // Draw origin markers
-  const origCoords = {};
-  [...EXISTING_LANES, ...TENDER_LANES].forEach(l => {
-    if (!origCoords[l.origin]) origCoords[l.origin] = [l.orig_lat, l.orig_lng];
-  });
-
-  Object.entries(origCoords).forEach(([name, [lat, lng]]) => {
-    if (activeOrigin !== 'ALL' && name !== activeOrigin) return;
-    const exLanes = EXISTING_LANES.filter(l => l.origin === name);
-    const tdLanes = TENDER_LANES.filter(l => l.origin === name);
-    if ((activeLayer === 'existing' && !exLanes.length) ||
-        (activeLayer === 'tender'   && !tdLanes.length)) return;
-
-    const isEast = lng > -90;
-    const marker = L.circleMarker([lat, lng], {
-      radius: 8, fillColor: isEast ? '#FAB43C' : '#E60080',
-      color: '#fff', weight: 2, fillOpacity: 0.95,
-    });
-    marker.bindTooltip(`<b>${name}</b><br/>${exLanes.length} ongoing · ${tdLanes.length} tenders`, {className:'lane-tooltip', sticky:true});
-    markerGroup.addLayer(marker);
-  });
-
-  // Destination dots (small)
+  // Draw destination dots FIRST (so origin dots render on top)
   const destSet = new Set();
   const allVisible = [
     ...(activeLayer !== 'tender' ? EXISTING_LANES : []),
@@ -379,6 +357,40 @@ function renderMap() {
       radius: 5, fillColor: isTender ? '#FAB43C' : '#32AAE1',
       color: '#fff', weight: 1.5, fillOpacity: 0.75,
     }).addTo(markerGroup);
+  });
+
+  // Draw origin markers LAST so they always sit on top of dest dots
+  const origCoords = {};
+  [...EXISTING_LANES, ...TENDER_LANES].forEach(l => {
+    if (!origCoords[l.origin]) origCoords[l.origin] = [l.orig_lat, l.orig_lng];
+  });
+
+  Object.entries(origCoords).forEach(([name, [lat, lng]]) => {
+    if (activeOrigin !== 'ALL' && name !== activeOrigin) return;
+    const exLanes = EXISTING_LANES.filter(l => l.origin === name);
+    const tdLanes = TENDER_LANES.filter(l => l.origin === name);
+    if (activeLayer === 'existing' && !exLanes.length) return;
+    if (activeLayer === 'tender'   && !tdLanes.length) return;
+
+    // Outer glow ring
+    L.circleMarker([lat, lng], {
+      radius: 13, fillColor: '#E60080',
+      color: '#E60080', weight: 0, fillOpacity: 0.15,
+    }).addTo(markerGroup);
+
+    // Main dot
+    const marker = L.circleMarker([lat, lng], {
+      radius: 9, fillColor: '#E60080',
+      color: '#fff', weight: 2.5, fillOpacity: 1,
+    });
+    marker.bindTooltip(
+      `<b>${name}</b><br/>${exLanes.length} ongoing lane${exLanes.length!==1?'s':''}${tdLanes.length?' · '+tdLanes.length+' tender'+( tdLanes.length!==1?'s':''):''}`,
+      {className:'lane-tooltip', sticky:true, direction:'top'}
+    );
+    marker.on('click', () => {
+      setOrigin(name);
+    });
+    markerGroup.addLayer(marker);
   });
 }
 
