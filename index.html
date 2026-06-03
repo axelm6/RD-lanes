@@ -99,14 +99,20 @@
   .btn-amber:hover{background:rgba(250,180,60,0.25);}
 
   /* Stats */
-  .stats-bar{display:grid;grid-template-columns:repeat(4,1fr) 180px;gap:14px;padding:20px 28px 0;}
+  .stats-bar{display:flex;align-items:center;gap:10px;padding:12px 28px;flex-wrap:wrap;}
+  .stat-chip{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:7px 14px;box-shadow:var(--shadow);white-space:nowrap;}
+  .stat-chip-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;}
+  .stat-chip-val{font-size:18px;font-weight:800;letter-spacing:-0.02em;line-height:1;}
+  .legend-chip{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:7px 14px;box-shadow:var(--shadow);display:flex;gap:16px;align-items:center;margin-left:auto;}
+  .legend-col{display:flex;flex-direction:column;gap:4px;}
+  .legend-row-item{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--text2);white-space:nowrap;}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 18px;box-shadow:var(--shadow);}
   .stat-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
   .stat-value{font-size:22px;font-weight:800;letter-spacing:-0.03em;}
   .c-blue{color:var(--blue);} .c-orange{color:var(--orange);} .c-pink{color:var(--pink);} .c-green{color:var(--green);}
 
   /* Map */
-  .content{flex:1;padding:20px 28px 40px;}
+  .content{flex:1;padding:12px 28px 40px;}
   .grad-bar{height:3px;border-radius:99px;margin-bottom:18px;background:linear-gradient(90deg,#E60080,#786EAF,#32AAE1,#C8D23C,#FAB43C);}
   #rd-map{width:100%;height:560px;border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border);box-shadow:var(--shadow);}
 
@@ -204,32 +210,42 @@
     </div>
 
     <div class="stats-bar">
-      <div class="stat-card"><div class="stat-label">Ongoing Lanes</div><div class="stat-value c-blue" id="stat-ex">90</div></div>
-      <div class="stat-card"><div class="stat-label">New Tenders (Apr 15+)</div><div class="stat-value c-orange" id="stat-td">9</div></div>
-      <div class="stat-card"><div class="stat-label">Origin Hubs</div><div class="stat-value c-pink" id="stat-hub">9</div></div>
-      <div class="stat-card"><div class="stat-label">Total Jobs (Ongoing)</div><div class="stat-value c-green" id="stat-jobs">320</div></div>
-      <div class="stat-card" style="display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:180px;">
-        <div class="stat-label">Legend</div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:28px;height:3px;border-radius:2px;background:#32AAE1;flex-shrink:0;"></div>Ongoing lane
+      <div class="stat-chip">
+        <div>
+          <div class="stat-chip-label">Ongoing Lanes</div>
+          <div class="stat-chip-val c-blue" id="stat-ex">90</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:28px;height:2px;border-top:2px dashed #FAB43C;flex-shrink:0;"></div>New tender
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-chip-label">New Tenders</div>
+          <div class="stat-chip-val c-orange" id="stat-td">9</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:10px;height:10px;border-radius:50%;background:#E60080;flex-shrink:0;"></div>Origin hub
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-chip-label">Origin Hubs</div>
+          <div class="stat-chip-val c-pink" id="stat-hub">9</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:8px;height:8px;border-radius:50%;background:#32AAE1;flex-shrink:0;"></div>Destination
+      </div>
+      <div class="stat-chip">
+        <div>
+          <div class="stat-chip-label">Total Jobs</div>
+          <div class="stat-chip-val c-green" id="stat-jobs">320</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:14px;height:10px;border-radius:2px;background:rgba(230,0,128,0.12);border:1px solid rgba(230,0,128,0.3);flex-shrink:0;"></div>Origin state
+      </div>
+      <!-- Legend chip — 2 columns -->
+      <div class="legend-chip">
+        <div class="legend-col">
+          <div class="legend-row-item"><div style="width:22px;height:2.5px;border-radius:2px;background:#32AAE1;flex-shrink:0;"></div>Ongoing</div>
+          <div class="legend-row-item"><div style="width:22px;height:0;border-top:2px dashed #FAB43C;flex-shrink:0;"></div>Tender</div>
+          <div class="legend-row-item"><div style="width:9px;height:9px;border-radius:50%;background:#E60080;flex-shrink:0;"></div>Origin hub</div>
+          <div class="legend-row-item"><div style="width:7px;height:7px;border-radius:50%;background:#32AAE1;flex-shrink:0;"></div>Destination</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:14px;height:10px;border-radius:2px;background:rgba(50,170,225,0.12);border:1px solid rgba(50,170,225,0.3);flex-shrink:0;"></div>Dest state
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:14px;height:10px;border-radius:2px;background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.3);flex-shrink:0;"></div>Both
+        <div class="legend-col">
+          <div class="legend-row-item"><div style="width:13px;height:9px;border-radius:2px;background:rgba(230,0,128,0.13);border:1px solid rgba(230,0,128,0.3);flex-shrink:0;"></div>Origin state</div>
+          <div class="legend-row-item"><div style="width:13px;height:9px;border-radius:2px;background:rgba(50,170,225,0.13);border:1px solid rgba(50,170,225,0.3);flex-shrink:0;"></div>Dest state</div>
+          <div class="legend-row-item"><div style="width:13px;height:9px;border-radius:2px;background:rgba(192,132,252,0.15);border:1px solid rgba(192,132,252,0.3);flex-shrink:0;"></div>Both</div>
         </div>
       </div>
     </div>
