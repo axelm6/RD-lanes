@@ -208,19 +208,28 @@
       <div class="stat-card"><div class="stat-label">New Tenders (Apr 15+)</div><div class="stat-value c-orange" id="stat-td">9</div></div>
       <div class="stat-card"><div class="stat-label">Origin Hubs</div><div class="stat-value c-pink" id="stat-hub">9</div></div>
       <div class="stat-card"><div class="stat-label">Total Jobs (Ongoing)</div><div class="stat-value c-green" id="stat-jobs">320</div></div>
-      <div class="stat-card" style="display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:160px;">
+      <div class="stat-card" style="display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:180px;">
         <div class="stat-label">Legend</div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:28px;height:3px;border-radius:2px;background:#32AAE1;flex-shrink:0;"></div>Ongoing
+          <div style="width:28px;height:3px;border-radius:2px;background:#32AAE1;flex-shrink:0;"></div>Ongoing lane
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
-          <div style="width:28px;height:3px;border-radius:2px;background:#FAB43C;flex-shrink:0;border-top:2px dashed #FAB43C;background:none;border-bottom:none;border-left:none;border-right:none;"></div>New Tender
+          <div style="width:28px;height:2px;border-top:2px dashed #FAB43C;flex-shrink:0;"></div>New tender
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
           <div style="width:10px;height:10px;border-radius:50%;background:#E60080;flex-shrink:0;"></div>Origin hub
         </div>
         <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
           <div style="width:8px;height:8px;border-radius:50%;background:#32AAE1;flex-shrink:0;"></div>Destination
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
+          <div style="width:14px;height:10px;border-radius:2px;background:rgba(230,0,128,0.12);border:1px solid rgba(230,0,128,0.3);flex-shrink:0;"></div>Origin state
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
+          <div style="width:14px;height:10px;border-radius:2px;background:rgba(50,170,225,0.12);border:1px solid rgba(50,170,225,0.3);flex-shrink:0;"></div>Dest state
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-size:11px;font-weight:600;color:var(--text2);">
+          <div style="width:14px;height:10px;border-radius:2px;background:rgba(192,132,252,0.12);border:1px solid rgba(192,132,252,0.3);flex-shrink:0;"></div>Both
         </div>
       </div>
     </div>
@@ -271,6 +280,12 @@ let rdMap, layerGroup, markerGroup;
 let activeLayer = 'all';
 let activeOrigins = new Set(); // empty = show all
 
+// States covered by RD network
+const ORIGIN_STATES = new Set(['California','Oregon','Texas','Washington','Nevada','Tennessee']);
+const DEST_STATES   = new Set(['New Mexico','California','Virginia','New York','Washington','Nevada','Colorado','Oregon','Oklahoma','New Jersey','North Carolina','Arizona','Louisiana','Texas']);
+
+let stateLayer = null;
+
 function initMap() {
   rdMap = L.map('rd-map', {
     center: [38.5, -108], zoom: 4,
@@ -281,10 +296,46 @@ function initMap() {
     attribution: '© OpenStreetMap contributors © CARTO', maxZoom: 19,
   }).addTo(rdMap);
 
-  layerGroup  = L.layerGroup().addTo(rdMap);
-  markerGroup = L.layerGroup().addTo(rdMap);
+  // State fill layer — load GeoJSON, draw BEFORE lanes
+  fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
+    .then(r => r.json())
+    .then(geo => {
+      stateLayer = L.geoJson(geo, {
+        style: feature => {
+          const name = feature.properties.name;
+          const isOrigin = ORIGIN_STATES.has(name);
+          const isDest   = DEST_STATES.has(name);
+          if (isOrigin && isDest) {
+            // Both — soft purple tint
+            return { fillColor: '#c084fc', fillOpacity: 0.10, color: '#c084fc', weight: 0.5, opacity: 0.25 };
+          } else if (isOrigin) {
+            // Origin only — very soft pink
+            return { fillColor: '#E60080', fillOpacity: 0.08, color: '#E60080', weight: 0.5, opacity: 0.20 };
+          } else if (isDest) {
+            // Dest only — very soft blue
+            return { fillColor: '#32AAE1', fillOpacity: 0.07, color: '#32AAE1', weight: 0.5, opacity: 0.18 };
+          }
+          return { fillColor: 'transparent', fillOpacity: 0, color: '#ccc', weight: 0.3, opacity: 0.15 };
+        },
+        onEachFeature: (feature, layer) => {
+          const name = feature.properties.name;
+          const isOrigin = ORIGIN_STATES.has(name);
+          const isDest   = DEST_STATES.has(name);
+          if (isOrigin || isDest) {
+            const tag = isOrigin && isDest ? 'Origin + Destination' : isOrigin ? 'Origin hub state' : 'Destination state';
+            layer.bindTooltip(`<b>${name}</b><br/><span style="font-size:11px;color:#9095a0;">${tag}</span>`, {
+              className: 'lane-tooltip', sticky: true, direction: 'top'
+            });
+          }
+        }
+      }).addTo(rdMap);
 
-  renderMap();
+      // Lanes and markers draw on top
+      layerGroup  = L.layerGroup().addTo(rdMap);
+      markerGroup = L.layerGroup().addTo(rdMap);
+      renderMap();
+    });
+
   buildOriginPills();
   buildLaneList();
 }
@@ -313,6 +364,7 @@ function arcPoints(lat1, lng1, lat2, lng2, steps) {
 }
 
 function renderMap() {
+  if (!layerGroup || !markerGroup) return;
   layerGroup.clearLayers();
   markerGroup.clearLayers();
 
