@@ -503,7 +503,7 @@ function renderMap() {
         color: '#FAB43C', weight: 3, opacity: 0.75,
         dashArray: '8 4',
       });
-      line.bindTooltip(`<b>${l.lane}</b><br/>Ref: ${l.ref} · Amount: $${l.amount.toLocaleString()}<br/>Pickup: ${l.pickup}`, {className:'lane-tooltip', sticky:true});
+      line.bindTooltip(`<b>${l.lane}</b><br/>Ref: ${l.ref} · Pickup: ${l.pickup}`, {className:'lane-tooltip', sticky:true});
       line.on('click', () => openDetail(l, 'tender'));
       line.on('mouseover', function() { this.setStyle({opacity:1, weight:4.5}); });
       line.on('mouseout',  function() { this.setStyle({opacity:0.75, weight:3}); });
@@ -681,7 +681,7 @@ function buildLaneList() {
     </tr>`;
   });
 
-  tbody.innerHTML = rows || `<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">No lanes match current filter</td></tr>`;
+  tbody.innerHTML = rows || `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">No lanes match current filter</td></tr>`;
 }
 
 // ── DETAIL PANEL ──────────────────────────────────────────────────────
