@@ -582,14 +582,32 @@ function setLayer(layer, btn) {
 
 function renderStatesOnly() {
   if (!layerGroup || !markerGroup) return;
-  // Clear all arcs and markers — show only state fills
   layerGroup.clearLayers();
   markerGroup.clearLayers();
-  // Compute states based on ALL lanes (ignore origin filter for this view)
-  const savedOrigins = activeOrigins;
-  activeOrigins = new Set(); // temporarily show all for state colors
-  refreshStateColors();
-  activeOrigins = savedOrigins;
+  // Compute states from ALL lanes — bypass activeLayer filter
+  const originStates = new Set();
+  const destStates   = new Set();
+  [...EXISTING_LANES, ...TENDER_LANES].forEach(l => {
+    const os = CITY_TO_STATE[l.origin] || CITY_TO_STATE[l.origin.toUpperCase()];
+    const ds = CITY_TO_STATE[l.dest]   || CITY_TO_STATE[l.dest.toUpperCase()];
+    if (os) originStates.add(os);
+    if (ds) destStates.add(ds);
+  });
+  if (!stateLayer) return;
+  stateLayer.eachLayer(layer => {
+    const name = layer.feature.properties.name;
+    const isOrigin = originStates.has(name);
+    const isDest   = destStates.has(name);
+    if (isOrigin && isDest) {
+      layer.setStyle({ fillColor: '#4ade80', fillOpacity: 0.08, color: '#4ade80', weight: 0.5, opacity: 0.20 });
+    } else if (isOrigin) {
+      layer.setStyle({ fillColor: '#E60080', fillOpacity: 0.08, color: '#E60080', weight: 0.5, opacity: 0.20 });
+    } else if (isDest) {
+      layer.setStyle({ fillColor: '#32AAE1', fillOpacity: 0.07, color: '#32AAE1', weight: 0.5, opacity: 0.18 });
+    } else {
+      layer.setStyle({ fillColor: 'transparent', fillOpacity: 0, color: '#ccc', weight: 0.3, opacity: 0.12 });
+    }
+  });
 }
 
 function buildOriginPills() {
