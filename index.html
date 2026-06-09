@@ -785,7 +785,14 @@ function fitAll() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────
-window.addEventListener('load', initMap);
+window.addEventListener('load', () => {
+  initMap();
+  // Force Leaflet to recalculate container size after layout is fully painted
+  setTimeout(() => { if (rdMap) rdMap.invalidateSize(); }, 100);
+  setTimeout(() => { if (rdMap) rdMap.invalidateSize(); }, 500);
+  setTimeout(() => { if (rdMap) rdMap.invalidateSize(); }, 1500);
+  window.addEventListener('resize', () => { if (rdMap) rdMap.invalidateSize(); });
+});
 </script>
 </body>
 </html>
